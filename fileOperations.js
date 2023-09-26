@@ -1,70 +1,84 @@
 const fs = require('fs');
 const http = require('http');
-const path = require('path');
+const url = require('url');
 
-const port = 3001;
-const dataFilePath = path.join(__dirname, 'users.json');
-
-const server = http.createServer((req, res) => {
-    if (req.method === 'GET' && req.url === '/api/users') {
-        fs.readFile(dataFilePath, 'utf8', (err, data) => {
-            if (err) {
-                console.error('Error reading data file:', err);
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Internal Server Error' }));
-                return;
-            }
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(data);
-        });
-    } else if (req.method === 'POST' && req.url === '/api/users') {
-        let requestBody = '';
-
-        req.on('data', (chunk) => {
-            requestBody += chunk;
-        });
-
-        req.on('end', () => {
-            try {
-                const newUser = JSON.parse(requestBody);
-
-                fs.readFile(dataFilePath, 'utf8', (err, data) => {
-                    if (err) {
-                        console.error('Error reading data file:', err);
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ error: 'Internal Server Error' }));
-                        return;
-                    }
-
-                    const users = JSON.parse(data);
-                    newUser.id = users.length + 1;
-
-                    users.push(newUser);
-                    fs.writeFile(dataFilePath, JSON.stringify(users, null, 2), 'utf8', (err) => {
-                        if (err) {
-                            console.error('Error writing data file:', err);
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ error: 'Internal Server Error' }));
-                            return;
-                        }
-
-                        res.writeHead(201, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(newUser));
-                    });
-                });
-            } catch (error) {
-                console.error('Error parsing request body:', error);
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Bad Request' }));
-            }
-        });
-    } else {
- 
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Not Found' }));
+// File operations
+function readCarFile(filePath, callback) {
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      callback(err, null);
+      return;
     }
+    callback(null, data);
+  });
+}
+
+function writeCarFile(filePath, content, callback) {
+  fs.writeFile(filePath, content, (err) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback(null);
+  });
+}
+
+function deleteCarFile(filePath, callback) {
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback(null);
+  });
+}
+
+// Sample car data
+const sampleCars = [
+  { model: 'Car Model 1', year: 2020, color: 'Red' },
+  { model: 'Car Model 2', year: 2021, color: 'Blue' },
+  { model: 'Car Model 3', year: 2019, color: 'Green' },
+];
+
+// Create an HTTP server
+const server = http.createServer((req, res) => {
+  const { pathname, query } = url.parse(req.url, true);
+
+  if (req.method === 'GET' && pathname === '/') {
+    // Serve an HTML page when accessing the root URL
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Car Management</title>
+        </head>
+        <body>
+          <h1>Welcome to the Car Management System</h1>
+          <p>This is a simple demonstration of a car management system.</p>
+          <form action="/api/v1/cars" method="GET">
+            <button type="submit">View Cars</button>
+          </form>
+        </body>
+      </html>
+    `;
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(htmlContent);
+  } else if (req.method === 'GET' && pathname === '/api/v1/cars') {
+    // Respond with sample car data as JSON
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(sampleCars));
+  } else if (req.method === 'POST' && pathname === '/api/v1/cars') {
+    // ... (the rest of your code for handling POST requests)
+  } else if (req.method === 'DELETE' && pathname === '/api/v1/cars') {
+    // ... (the rest of your code for handling DELETE requests)
+  } else {
+    // Handle invalid routes
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  }
 });
 
-server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`Server is running on port http://localhost:${PORT}`);
 });
